@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:llm_chat/main.dart';
 import 'package:llm_chat/model/llm_chat_message.dart';
+import 'package:llm_lab_sdk_flutter/model/message_item.dart';
 import 'package:llm_lab_sdk_flutter/service/llm_lab_sdk.dart';
 
 void main() {
@@ -74,7 +75,44 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
 
     bool firstResponseReceived = false;
-    final result = llmLab
+    void handleInitialResponse(ChatStreamResponse response) {
+      messages.add(LlmChatMessage.assistant(message: response.response));
+      firstResponseReceived = true;
+    }
+
+    void handleSystemPrompt(ChatStreamResponse response) {
+      if (response.systemPrompt.isNotEmpty) {
+        final index = messages.indexWhere((e) => e.type == 'system');
+        if (index != -1) {
+          messages[index] =
+              LlmChatMessage.system(message: response.systemPrompt);
+        } else {
+          messages.add(LlmChatMessage.system(message: response.systemPrompt));
+        }
+      }
+    }
+
+    void handleAssistantResponse(ChatStreamResponse response) {
+      var lastAssistantMessageIndex =
+          messages.lastIndexWhere((message) => message.type == 'assistant');
+      if (lastAssistantMessageIndex != -1) {
+        messages[lastAssistantMessageIndex] = LlmChatMessage.assistant(
+          message: (messages[lastAssistantMessageIndex].message ?? '') +
+              response.response,
+        );
+      }
+    }
+
+    void handleResponse(ChatStreamResponse response) {
+      if (!firstResponseReceived) {
+        handleInitialResponse(response);
+      } else {
+        handleSystemPrompt(response);
+        handleAssistantResponse(response);
+      }
+    }
+
+    llmLab
         .chatWithAgentStream(
           model: '7cff88b1-7cb5-4241-8f90-91b7be3a38ed',
           messages: messages,
@@ -82,40 +120,7 @@ class _HomePageState extends State<HomePage> {
         .listen(
           (response) async {
             if (response.isRight) {
-              if (!firstResponseReceived) {
-                // This is the initial response, so we add it
-                messages.add(
-                    LlmChatMessage.assistant(message: response.right.response));
-                firstResponseReceived = true;
-              } else {
-                if (response.right.systemPrompt.isNotEmpty) {
-                  final index = messages.indexWhere((e) => e.type == 'system');
-                  // Check if a system message exists in the chat history
-                  if (index != -1) {
-                    messages.removeAt(index);
-                    messages.insert(
-                        index,
-                        LlmChatMessage.system(
-                            message: response.right.systemPrompt));
-                  } else {
-                    // If no system message exists, you might want to add it or handle it differently
-                    // For example, adding it as a new message
-                    messages.add(LlmChatMessage.system(
-                        message: response.right.systemPrompt));
-                  }
-                }
-
-                var lastAssistantMessageIndex = messages
-                    .lastIndexWhere((message) => message.type == 'assistant');
-                if (lastAssistantMessageIndex != -1) {
-                  messages[lastAssistantMessageIndex] =
-                      LlmChatMessage.assistant(
-                          message:
-                              (messages[lastAssistantMessageIndex].message ??
-                                      '') +
-                                  response.right.response);
-                }
-              }
+              handleResponse(response.right);
               setState(() {});
             } else {
               debugPrint('streamChatWithAgent returned left');
