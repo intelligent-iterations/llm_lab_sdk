@@ -35,11 +35,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     messages = [];
-    llmLab.setApiKey('sk-63d747de-1b39-48e7-8a15-fc5f37026a20');
-    llmLab.chatWithAgentFuture(
-      model: '28901f3d-cda7-49b9-83fa-b4855897b990',
-      messages: messages,
-    );
+    llmLab.setApiKey('');
+    // llmLab.chatWithAgentFuture(
+    //   model: '28901f3d-cda7-49b9-83fa-b4855897b990',
+    //   messages: messages,
+    // );
     super.initState();
   }
 
@@ -76,7 +76,7 @@ class _HomePageState extends State<HomePage> {
     bool firstResponseReceived = false;
     final result = llmLab
         .chatWithAgentStream(
-          model: '',
+          model: '7cff88b1-7cb5-4241-8f90-91b7be3a38ed',
           messages: messages,
         )
         .listen(
