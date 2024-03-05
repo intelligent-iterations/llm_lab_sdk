@@ -1,9 +1,11 @@
 import "dart:async";
 import "dart:convert";
 
-import 'package:fetch_client/fetch_client.dart' as fetch;
 import "package:flutter/cupertino.dart";
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
+import "package:llm_lab_sdk_flutter/util/streaming_default.dart"
+    if (dart.library.js) 'package:llm_lab_sdk_flutter/util/streaming_web.dart'
+    if (dart.library.io) 'package:llm_lab_sdk_flutter/util/streaming_io.dart';
 
 import "../model/message_item.dart";
 
@@ -17,6 +19,10 @@ const messageFieldKey = 'message';
 @protected
 @immutable
 abstract class StreamClient {
+  static http.Client _streamingHttpClient() {
+    return createClient();
+  }
+
   static Stream<T> postChatStream<T>({
     required String fullPath,
     required String apiKey,
@@ -31,8 +37,8 @@ abstract class StreamClient {
       'Content-Type': 'application/json',
     };
 
-    fetch.FetchClient(mode: fetch.RequestMode.cors)
-        .send(Request('POST', uri)
+    _streamingHttpClient()
+        .send(http.Request('POST', uri)
           ..headers.addAll(headers)
           ..body = jsonEncode(body))
         .then((response) {
@@ -75,8 +81,6 @@ Future<void> processAndEmitData(
     if (line.isEmpty || !line.startsWith(streamResponseStart)) {
       continue;
     }
-
-    debugPrint('Received line: $line');
 
     final String jsonData = line.substring(streamResponseStart.length);
     if (jsonData.contains('statusCode')) {

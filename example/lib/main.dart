@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:llm_lab_sdk_flutter/model/message_item.dart';
 import 'package:llm_lab_sdk_flutter/service/llm_lab_sdk.dart';
+import 'package:uuid/uuid.dart';
 
 void main() {
-  runApp(MySocialMediaApp());
+  runApp(const MySocialMediaApp());
 }
 
 class MySocialMediaApp extends StatelessWidget {
+  const MySocialMediaApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'My Social Media App',
+      title: 'My Chat App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -26,21 +29,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late final List<LlmChatMessage> messages;
+  String? sessionId;
 
-  final llmLab = LLMLabSDK();
+  final llmLab = LLMLabSDK(apiKey: 'youraApiKeyHere');
 
   bool isLoading = false;
+  bool isStream = true;
 
   @override
   void initState() {
+    sessionId = const Uuid().v4();
     messages = [];
-    llmLab.setApiKey('');
-
-    ///api key
-    // llmLab.chatWithAgentFuture(
-    //   model: '28901f3d-cda7-49b9-83fa-b4855897b990',
-    //   messages: messages,
-    // );
     super.initState();
   }
 
@@ -48,10 +47,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home'),
+        title: const Text('Home'),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          streamSwitch(),
           Expanded(
             child: LLMChat(
               messages: messages,
@@ -67,29 +68,65 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget streamSwitch() {
+    return Row(children: [
+      const SizedBox(width: 18),
+      Switch(
+          value: isStream,
+          onChanged: (value) {
+            setState(() {
+              isStream = value;
+            });
+          }),
+      const SizedBox(width: 4),
+      Text(
+        isStream ? 'Chat is a Stream' : 'Chat is not a Stream',
+        style: TextStyle(fontSize: 18),
+      ),
+    ]);
+  }
+
   void onSubmit({
     required String userInput,
     required BuildContext context,
   }) async {
     messages.add(LlmChatMessage.user(message: userInput));
     setState(() {});
+    if (isStream) {
+      await handleStreamResponse(userInput: userInput, context: context);
+    } else {
+      await handleFutureResponse(userInput: userInput, context: context);
+    }
+  }
 
+  Future<void> handleFutureResponse({
+    required String userInput,
+    required BuildContext context,
+  }) async {
+    final result = await llmLab.chatWithAgentFuture(
+      sessionId: sessionId,
+      model: '', // agent id
+      messages: messages,
+    );
+    if (result.isRight) {
+      messages.add(result.right);
+    } else {
+      messages.add(LlmChatMessage(
+          time: DateTime.now().millisecondsSinceEpoch,
+          message: 'Something went wrong',
+          type: 'assistant'));
+    }
+    setState(() {});
+  }
+
+  Future<void> handleStreamResponse({
+    required String userInput,
+    required BuildContext context,
+  }) async {
     bool firstResponseReceived = false;
     void handleInitialResponse(ChatStreamResponse response) {
       messages.add(LlmChatMessage.assistant(message: response.response));
       firstResponseReceived = true;
-    }
-
-    void handleSystemPrompt(ChatStreamResponse response) {
-      if (response.systemPrompt.isNotEmpty) {
-        final index = messages.indexWhere((e) => e.type == 'system');
-        if (index != -1) {
-          messages[index] =
-              LlmChatMessage.system(message: response.systemPrompt);
-        } else {
-          messages.add(LlmChatMessage.system(message: response.systemPrompt));
-        }
-      }
     }
 
     void handleAssistantResponse(ChatStreamResponse response) {
@@ -107,16 +144,14 @@ class _HomePageState extends State<HomePage> {
       if (!firstResponseReceived) {
         handleInitialResponse(response);
       } else {
-        handleSystemPrompt(response);
         handleAssistantResponse(response);
       }
     }
 
     llmLab
         .chatWithAgentStream(
-          model: '',
-
-          ///agent id
+          sessionId: sessionId,
+          model: '', // agent id
           messages: messages,
         )
         .listen(

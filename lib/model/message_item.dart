@@ -27,3 +27,49 @@ class ChatStreamResponse {
     );
   }
 }
+
+class ChatCompletionResponse {
+  final List<Choice> choices;
+
+  ChatCompletionResponse({
+    required this.choices,
+  });
+
+  factory ChatCompletionResponse.fromJson(Map<String, dynamic> json) {
+    return ChatCompletionResponse(
+      choices:
+          List<Choice>.from(json['choices'].map((x) => Choice.fromJson(x))),
+    );
+  }
+}
+
+class Choice {
+  final int index;
+  final Message message;
+  final String finishReason;
+
+  Choice(
+      {required this.index, required this.message, required this.finishReason});
+
+  factory Choice.fromJson(Map<String, dynamic> json) {
+    return Choice(
+      index: json['index'],
+      message: Message.fromJson(json['message']),
+      finishReason: json['finish_reason'],
+    );
+  }
+}
+
+class Message {
+  final String? role;
+  final String? content;
+
+  Message({required this.role, required this.content});
+
+  factory Message.fromJson(Map<String, dynamic> json) {
+    return Message(
+      role: json['role'],
+      content: json['content'],
+    );
+  }
+}

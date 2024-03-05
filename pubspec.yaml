@@ -14,6 +14,8 @@ dependencies:
   either_dart: ^1.0.0
   fetch_client: ^1.0.2
   llm_chat: ^1.0.0+1
+  http: ^1.2.1
+
 
 
 dev_dependencies:
