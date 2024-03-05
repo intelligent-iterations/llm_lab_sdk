@@ -1,9 +1,15 @@
+library llm_lab;
+
 import 'package:either_dart/either.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:llm_chat/model/llm_chat_message.dart';
 
 import '../model/message_item.dart';
 import 'stream_client.dart';
+
+export 'package:llm_chat/main.dart';
+export 'package:llm_chat/model/llm_chat_message.dart';
+export 'package:llm_chat/model/llm_style.dart';
 
 class LLMLabSDK {
   String apiKey = '';

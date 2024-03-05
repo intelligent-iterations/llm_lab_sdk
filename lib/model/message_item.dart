@@ -1,3 +1,5 @@
+library llm_lab;
+
 class MessageItem {
   final String? role;
   final String? content;

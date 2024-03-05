@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:llm_chat/main.dart';
-import 'package:llm_chat/model/llm_chat_message.dart';
 import 'package:llm_lab_sdk_flutter/model/message_item.dart';
 import 'package:llm_lab_sdk_flutter/service/llm_lab_sdk.dart';
 
@@ -37,6 +35,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     messages = [];
     llmLab.setApiKey('');
+
+    ///api key
     // llmLab.chatWithAgentFuture(
     //   model: '28901f3d-cda7-49b9-83fa-b4855897b990',
     //   messages: messages,
@@ -114,7 +114,9 @@ class _HomePageState extends State<HomePage> {
 
     llmLab
         .chatWithAgentStream(
-          model: '7cff88b1-7cb5-4241-8f90-91b7be3a38ed',
+          model: '',
+
+          ///agent id
           messages: messages,
         )
         .listen(
