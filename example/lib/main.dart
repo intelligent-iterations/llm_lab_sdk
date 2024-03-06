@@ -31,8 +31,8 @@ class _HomePageState extends State<HomePage> {
   late final List<LlmChatMessage> messages;
   String? sessionId;
 
-  final llmLab = LLMLabSDK(apiKey: 'youraApiKeyHere');
-
+  final llmLab = LLMLabSDK(apiKey: ''); //apikey
+  final agentId = ''; //agentId
   bool isLoading = false;
   bool isStream = true;
 
@@ -46,13 +46,19 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          streamSwitch(),
+          SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              streamSwitch(),
+              BaseButton(
+                  title: 'Vectorize Conversation',
+                  onPressed: () => vectorizeConversation(context))
+            ],
+          ),
           Expanded(
             child: LLMChat(
               messages: messages,
@@ -86,6 +92,24 @@ class _HomePageState extends State<HomePage> {
     ]);
   }
 
+  void vectorizeConversation(BuildContext context) async {
+    final messagesJson = messages.map((e) => e.toJson()).toList();
+    Map<String, String> segments = {};
+    for (final message in messagesJson) {
+      segments[const Uuid().v4()] = message.toString();
+    }
+    final result = await llmLab.upsertVectors(
+        collectionId: '', //collectionId
+        segments: segments);
+    String resultMessage = result.isRight ? 'Upsert Success!' : result.left;
+    await showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+              title: Text(resultMessage),
+            ));
+    setState(() {});
+  }
+
   void onSubmit({
     required String userInput,
     required BuildContext context,
@@ -105,7 +129,7 @@ class _HomePageState extends State<HomePage> {
   }) async {
     final result = await llmLab.chatWithAgentFuture(
       sessionId: sessionId,
-      model: '', // agent id
+      model: agentId,
       messages: messages,
     );
     if (result.isRight) {
@@ -151,7 +175,7 @@ class _HomePageState extends State<HomePage> {
     llmLab
         .chatWithAgentStream(
           sessionId: sessionId,
-          model: '', // agent id
+          model: agentId, // agent id
           messages: messages,
         )
         .listen(
@@ -168,5 +192,20 @@ class _HomePageState extends State<HomePage> {
             debugPrint('Error from streamChatWithAgent: $error');
           },
         );
+  }
+}
+
+class BaseButton extends StatelessWidget {
+  const BaseButton({super.key, required this.title, required this.onPressed});
+
+  final String title;
+  final Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Text(title),
+    );
   }
 }

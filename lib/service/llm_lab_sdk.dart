@@ -8,6 +8,7 @@ import 'package:http/http.dart';
 import 'package:llm_chat/model/llm_chat_message.dart';
 
 import '../model/message_item.dart';
+import '../model/upsert_response.dart';
 import 'stream_client.dart';
 
 export 'package:llm_chat/main.dart';
@@ -18,6 +19,9 @@ class LLMLabSDK {
   const LLMLabSDK({required this.apiKey});
 
   final String apiKey;
+  final tag = 'LLMLabSDK';
+  final baseUrl = 'https://launch-api.com';
+
   Future<Either<String, LlmChatMessage>> chatWithAgentFuture({
     required String model,
     required List<LlmChatMessage> messages,
@@ -63,8 +67,33 @@ class LLMLabSDK {
     }
   }
 
-  final tag = 'LLMLabSDK';
-  final baseUrl = 'https://launch-api.com';
+  Future<Either<String, UpsertResponse>> upsertVectors(
+      {required String collectionId,
+      required Map<String, String>? segments}) async {
+    const method = 'upsertVectors';
+    try {
+      debugPrint('$tag $method started');
+      var body = {'segments': segments};
+      final response = await post(
+        Uri.parse('$baseUrl/relevantMemory/$collectionId/upsert'),
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': apiKey,
+        },
+        body: json.encode(body),
+      );
+      debugPrint('$tag $method success');
+      final upsertResponse =
+          UpsertResponse.fromJson(json.decode(response.body));
+      if (upsertResponse.warning != null) {
+        return Left(upsertResponse.warning ?? "Something went wrong");
+      }
+      return Right(upsertResponse);
+    } catch (e) {
+      debugPrint('$tag $method exception: $e');
+      return Left('$e');
+    }
+  }
 
   Stream<Either<String, ChatStreamResponse>> chatWithAgentStream({
     required String model,
