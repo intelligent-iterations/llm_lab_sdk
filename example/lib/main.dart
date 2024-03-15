@@ -31,8 +31,8 @@ class _HomePageState extends State<HomePage> {
   List<LlmChatMessage> messages = [];
   String? sessionId;
 
-  final llmLab = LLMLabSDK(apiKey: 'sk-0209022c-371a-48db-88dc-8ac542d27a03'); //apikey
-  final agentId = '28901f3d-cda7-49b9-83fa-b4855897b990'; //agentId
+  final llmLab = LLMLabSDK(apiKey: ''); //apikey
+  final agentId = ''; //agentId
   bool isLoading = false;
   bool isStream = true;
 
