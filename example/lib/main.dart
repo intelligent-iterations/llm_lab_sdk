@@ -28,11 +28,11 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final List<LlmChatMessage> messages;
+  List<LlmChatMessage> messages = [];
   String? sessionId;
 
-  final llmLab = LLMLabSDK(apiKey: ''); //apikey
-  final agentId = ''; //agentId
+  final llmLab = LLMLabSDK(apiKey: 'sk-0209022c-371a-48db-88dc-8ac542d27a03'); //apikey
+  final agentId = '28901f3d-cda7-49b9-83fa-b4855897b990'; //agentId
   bool isLoading = false;
   bool isStream = true;
 
@@ -147,51 +147,22 @@ class _HomePageState extends State<HomePage> {
     required String userInput,
     required BuildContext context,
   }) async {
-    bool firstResponseReceived = false;
-    void handleInitialResponse(ChatStreamResponse response) {
-      messages.add(LlmChatMessage.assistant(message: response.response));
-      firstResponseReceived = true;
-    }
-
-    void handleAssistantResponse(ChatStreamResponse response) {
-      var lastAssistantMessageIndex =
-          messages.lastIndexWhere((message) => message.type == 'assistant');
-      if (lastAssistantMessageIndex != -1) {
-        messages[lastAssistantMessageIndex] = LlmChatMessage.assistant(
-          message: (messages[lastAssistantMessageIndex].message ?? '') +
-              response.response,
-        );
-      }
-    }
-
-    void handleResponse(ChatStreamResponse response) {
-      if (!firstResponseReceived) {
-        handleInitialResponse(response);
-      } else {
-        handleAssistantResponse(response);
-      }
-    }
-
     llmLab
         .chatWithAgentStream(
-          sessionId: sessionId,
-          model: agentId, // agent id
-          messages: messages,
-        )
+      sessionId: sessionId,
+      model: agentId, // agent id
+      messages: messages,
+    )
         .listen(
-          (response) async {
-            if (response.isRight) {
-              handleResponse(response.right);
-              setState(() {});
-            } else {
-              debugPrint('streamChatWithAgent returned left');
-            }
-          },
-          onDone: () {},
-          onError: (error) {
-            debugPrint('Error from streamChatWithAgent: $error');
-          },
-        );
+      (response) async {
+        if (response.isRight) {
+          messages = response.right;
+          setState(() {});
+        } else {
+          debugPrint('streamChatWithAgent has an error');
+        }
+      },
+    );
   }
 }
 

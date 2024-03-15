@@ -95,7 +95,7 @@ class LLMLabSDK {
     }
   }
 
-  Stream<Either<String, ChatStreamResponse>> chatWithAgentStream({
+  Stream<Either<String, List<LlmChatMessage>>> chatWithAgentStream({
     required String model,
     required List<LlmChatMessage> messages,
     String? sessionId,
@@ -130,9 +130,20 @@ class LLMLabSDK {
         },
       );
 
+      bool firstResponseReceived = false;
+
       await for (var event in stream) {
         if (event is ChatStreamResponse) {
-          yield Right(event);
+          final _messages = handleResponse(
+            response: event,
+            messages: messages,
+            onFirstResponseReceived: () {
+              firstResponseReceived = false;
+            },
+            firstResponseReceived: firstResponseReceived,
+          );
+          yield Right(_messages);
+          firstResponseReceived = true;
         } else {
           debugPrint('streamAiChat yielding left');
           yield Left(event.toString());
@@ -142,5 +153,52 @@ class LLMLabSDK {
       debugPrint('chatWithAgent yielding left on exception $e');
       yield Left(e.toString());
     }
+  }
+
+  List<LlmChatMessage> handleResponse({
+    required bool firstResponseReceived,
+    required List<LlmChatMessage> messages,
+    required ChatStreamResponse response,
+    required Function() onFirstResponseReceived,
+  }) {
+    if (!firstResponseReceived) {
+      return handleInitialResponse(
+        response: response,
+        messages: messages,
+        onFirstResponseReceived: onFirstResponseReceived,
+      );
+    } else {
+      return handleAssistantResponse(
+        messages: messages,
+        response: response,
+      );
+    }
+  }
+
+  List<LlmChatMessage> handleInitialResponse({
+    required ChatStreamResponse response,
+    required List<LlmChatMessage> messages,
+    required Function() onFirstResponseReceived,
+  }) {
+    messages.add(LlmChatMessage.assistant(message: response.response));
+    onFirstResponseReceived();
+    return messages;
+  }
+
+  List<LlmChatMessage> handleAssistantResponse({
+    required ChatStreamResponse response,
+    required List<LlmChatMessage> messages,
+  }) {
+    var lastAssistantMessageIndex = messages.lastIndexWhere(
+      (message) => message.type == 'assistant',
+    );
+
+    if (lastAssistantMessageIndex != -1) {
+      messages[lastAssistantMessageIndex] = LlmChatMessage.assistant(
+        message: (messages[lastAssistantMessageIndex].message ?? '') +
+            response.response,
+      );
+    }
+    return messages;
   }
 }
